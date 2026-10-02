@@ -114,33 +114,51 @@ async def decision_stream(websocket: WebSocket):
             # Keep connection open, client might send commands like "PLAY", "PAUSE"
             data = await websocket.receive_text()
             if data.startswith("START_REPLAY"):
-                asyncio.create_task(run_replay(websocket))
+                async def safe_run_replay(ws):
+                    try:
+                        await run_replay(ws)
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        print(f"Error in run_replay: {e}", flush=True)
+                asyncio.create_task(safe_run_replay(websocket))
     except WebSocketDisconnect:
         app_state.connected_clients.remove(websocket)
 
 async def run_replay(websocket: WebSocket):
+    print("Starting run_replay...", flush=True)
     app_state.is_live = False
     adapter = ReplayStreamAdapter(db, app_state.active_session_key)
+    print("Adapter created", flush=True)
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
+    print("Engine created", flush=True)
     
     app_state.canonical_state = CanonicalRaceState(session_key=app_state.active_session_key)
+    print("Starting generation...", flush=True)
     
+    event_count = 0
     for ev in adapter.generate_events():
+        event_count += 1
+        print(f"Processing event {event_count}: {ev.event_type}", flush=True)
         # Mock fresh weather
         app_state.canonical_state.weather.last_update = ev.timestamp
+        print("Calling process_event", flush=True)
         st, mat = process_event(app_state.canonical_state, ev)
+        print(f"process_event returned, mat={mat}. Calling evaluate...", flush=True)
         dec = engine.evaluate(st, mat, current_time=ev.timestamp)
+        print("evaluate returned", flush=True)
         
         # Broadcast state update periodically or on material change
         if mat:
             state_msg = {
                 "type": "STATE_UPDATE",
-                "payload": app_state.canonical_state.model_dump()
+                "payload": app_state.canonical_state.model_dump(mode='json')
             }
             try:
                 await websocket.send_json(state_msg)
-            except:
+            except Exception as e:
+                print(f"Failed to send state: {e}")
                 break
                 
         if dec and dec.selected_strategy != "DECISION_WITHHELD":
