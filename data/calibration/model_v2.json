@@ -1,0 +1,236 @@
+{
+    "version": "v2",
+    "calibration_date": "2026-10-01T18:20:58.449290Z",
+    "calibration_races": [
+        7779,
+        7787,
+        9070,
+        9078,
+        9094,
+        9110,
+        9118,
+        9126,
+        9133,
+        9157,
+        9173
+    ],
+    "degradation_slopes": {
+        "SOFT": {
+            "value": 0.10057816822120458,
+            "source": "CALIBRATED",
+            "sample_size": 168,
+            "uncertainty": 0.008643360730648229,
+            "quality_status": "ACCEPTED"
+        },
+        "MEDIUM": {
+            "value": 0.04521318907227467,
+            "source": "CALIBRATED",
+            "sample_size": 2107,
+            "uncertainty": 0.0018513989758529048,
+            "quality_status": "ACCEPTED"
+        },
+        "HARD": {
+            "value": 0.046150719192411316,
+            "source": "CALIBRATED",
+            "sample_size": 4278,
+            "uncertainty": 0.0010326008195661528,
+            "quality_status": "ACCEPTED"
+        }
+    },
+    "compound_deltas": {
+        "SOFT": {
+            "value": 0.0,
+            "source": "CALIBRATED",
+            "sample_size": 168,
+            "uncertainty": 0.0,
+            "quality_status": "ACCEPTED"
+        },
+        "MEDIUM": {
+            "value": 0.7193867519271525,
+            "source": "CALIBRATED",
+            "sample_size": 2107,
+            "uncertainty": 0.1365653913524106,
+            "quality_status": "ACCEPTED"
+        },
+        "HARD": {
+            "value": 0.5694675018162378,
+            "source": "CALIBRATED",
+            "sample_size": 4278,
+            "uncertainty": 0.1346560724307073,
+            "quality_status": "ACCEPTED"
+        }
+    },
+    "fuel_burn_effect": {
+        "value": 0.06,
+        "source": "PRIOR",
+        "sample_size": 0,
+        "uncertainty": 0.0,
+        "quality_status": "ACCEPTED"
+    },
+    "fallback_degradation": {
+        "value": 0.08,
+        "source": "PRIOR",
+        "sample_size": 0,
+        "uncertainty": 0.0,
+        "quality_status": "ACCEPTED"
+    },
+    "fallback_compound_delta": {
+        "value": 0.6,
+        "source": "PRIOR",
+        "sample_size": 0,
+        "uncertainty": 0.0,
+        "quality_status": "ACCEPTED"
+    },
+    "pit_loss": {
+        "value": 23.75,
+        "source": "CALIBRATED",
+        "sample_size": 218,
+        "uncertainty": 2.7428100000000017,
+        "quality_status": "ACCEPTED"
+    },
+    "circuit_pit_loss": {
+        "9110": {
+            "value": 24.1,
+            "source": "CALIBRATED",
+            "sample_size": 32,
+            "uncertainty": 0.6671700000000016,
+            "quality_status": "ACCEPTED"
+        },
+        "9118": {
+            "value": 23.75,
+            "source": "FALLBACK",
+            "sample_size": 63,
+            "uncertainty": 3.854760000000002,
+            "quality_status": "REJECTED"
+        },
+        "9126": {
+            "value": 28.75,
+            "source": "CALIBRATED",
+            "sample_size": 24,
+            "uncertainty": 0.5189100000000021,
+            "quality_status": "ACCEPTED"
+        },
+        "9133": {
+            "value": 21.95,
+            "source": "CALIBRATED",
+            "sample_size": 36,
+            "uncertainty": 0.6671699999999989,
+            "quality_status": "ACCEPTED"
+        },
+        "9157": {
+            "value": 24.5,
+            "source": "CALIBRATED",
+            "sample_size": 25,
+            "uncertainty": 0.444780000000001,
+            "quality_status": "ACCEPTED"
+        },
+        "9173": {
+            "value": 23.75,
+            "source": "FALLBACK",
+            "sample_size": 38,
+            "uncertainty": 0.8154299999999983,
+            "quality_status": "REJECTED"
+        }
+    },
+    "residuals": {
+        "mean": {
+            "value": 7.746856719368505e-13,
+            "source": "CALIBRATED",
+            "sample_size": 6553,
+            "uncertainty": 0.0,
+            "quality_status": "ACCEPTED"
+        },
+        "std": {
+            "value": 0.638079577336883,
+            "source": "CALIBRATED",
+            "sample_size": 6553,
+            "uncertainty": 0.0,
+            "quality_status": "ACCEPTED"
+        }
+    },
+    "degradation_uncertainty": {
+        "value": 0.0638079577336883,
+        "source": "CALIBRATED",
+        "sample_size": 6553,
+        "uncertainty": 0.0,
+        "quality_status": "ACCEPTED"
+    },
+    "metadata": {
+        "stats": {
+            "races_processed": 11,
+            "raw_observations": 12325,
+            "valid_observations": 11016,
+            "excluded_observations": 1309,
+            "exclusion_reasons": {
+                "pit_lap": 613,
+                "safety_car": 541,
+                "vsc": 148,
+                "red_flag": 212,
+                "invalid_lap_time": 278,
+                "missing_features": 58
+            }
+        },
+        "report_data": {
+            "pit_loss": {
+                "robust_central": 23.75,
+                "dispersion": 2.7428100000000017,
+                "p10": 21.1,
+                "p50": 23.75,
+                "p90": 28.860000000000003,
+                "sample_size": 218,
+                "excluded_direct": 6,
+                "inferred_kept_separate": 0,
+                "direct_vs_inferred": "DIRECT (from pit_stops collection)",
+                "exclusion_rationale": "Excluded pit durations > 45s as nonstandard events (red-flags, repairs, drive-through penalties)."
+            },
+            "tyre_model": {
+                "SOFT": {
+                    "estimate": 0.10057816822120458,
+                    "se": 0.008643360730648229,
+                    "n": 168
+                },
+                "MEDIUM": {
+                    "estimate": 0.04521318907227467,
+                    "se": 0.0018513989758529048,
+                    "n": 2107
+                },
+                "HARD": {
+                    "estimate": 0.046150719192411316,
+                    "se": 0.0010326008195661528,
+                    "n": 4278
+                }
+            },
+            "compound_model": {
+                "MEDIUM_vs_SOFT": {
+                    "estimate": 0.7193867519271525,
+                    "se": 0.1365653913524106
+                },
+                "HARD_vs_SOFT": {
+                    "estimate": 0.5694675018162378,
+                    "se": 0.1346560724307073
+                }
+            },
+            "fuel_model": {
+                "effect": 0.06,
+                "se": 0.0,
+                "method": "FUEL_EFFECT_UNIDENTIFIABLE (Fixed prior applied to avoid collinearity)"
+            },
+            "linearity_test": {
+                "linear_mse": 0.4210233185396029,
+                "quadratic_mse": 0.42106844913370545,
+                "conclusion": "Linear remains appropriate for simplicity"
+            },
+            "residuals": {
+                "mean": 7.746856719368505e-13,
+                "std": 0.638079577336883,
+                "p10": -0.6701058882411871,
+                "p25": -0.3678907107230742,
+                "p50": -0.04541348211573393,
+                "p75": 0.2759371463814091,
+                "p90": 0.6406132101017108,
+                "is_gaussian": false
+            },
+            "fallback_hierarchy": "1. Pit Loss: Circuit-specific Pit Loss -> Global Pit Loss -> 24.0s\n2. Tyre Degradation: Calibrated Profile -> GLOBAL_FALLBACK_TYRE_DEGRADATION (0.08s/lap)\n3. Compound Pace Delta: Calibrated Profile -> GLOBAL_FALLBACK_COMPOUND_PACE (0.6s/lap)\nLegacy hardcoded values will NOT silently override the calibration profile."
+        }
+    }
+}
