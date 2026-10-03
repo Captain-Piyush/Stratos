@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useRaceState } from '../hooks/useRaceState';
-import { CandidatePlot } from '../components/CandidatePlot';
 import { PaceEvolutionPlot } from '../components/PaceEvolutionPlot';
 import { TyreDegradationPlot } from '../components/TyreDegradationPlot';
 import { GapPlot } from '../components/GapPlot';
@@ -9,7 +8,7 @@ import { CounterfactualTable } from '../components/CounterfactualTable';
 import { ActualOutcomePanel } from '../components/ActualOutcomePanel';
 import { useCalibration } from '../hooks/useCalibration';
 import { useHistoricalOutcome } from '../hooks/useHistoricalOutcome';
-import { Play, Pause, StepForward, FastForward, Activity } from 'lucide-react';
+import { Play, Pause, StepForward, FastForward } from 'lucide-react';
 import '../index.css';
 
 export function RaceConsole() {
@@ -35,15 +34,15 @@ export function RaceConsole() {
     );
 
     if (connectionStatus === "CONNECTING") {
-        return <div style={{ padding: 24 }}>Connecting to STRATOS...</div>;
+        return <div style={{ padding: 16 }}>CONNECTING TO TELEMETRY STREAM...</div>;
     }
 
     if (connectionStatus === "DISCONNECTED") {
-        return <div style={{ padding: 24, color: 'var(--accent-red)' }}>DISCONNECTED. Attempting to reconnect...</div>;
+        return <div style={{ padding: 16, color: 'var(--accent-red)' }}>STREAM DISCONNECTED. RECONNECTING...</div>;
     }
 
     if (!state) {
-        return <div style={{ padding: 24 }}>Initializing state...</div>;
+        return <div style={{ padding: 16 }}>INITIALIZING RACE STATE...</div>;
     }
 
     const sortedDrivers = Object.values(state.driver_states).sort((a, b) => {
@@ -52,158 +51,152 @@ export function RaceConsole() {
     });
 
     return (
-        <div className="console-container">
-            <header className="console-header">
-                <div className="race-info">
-                    <h1>STRATOS Race Engineer</h1>
-                    <span style={{ color: 'var(--text-muted)' }}>Session {state.session_key}</span>
-                    <span>Lap {state.current_leader_lap} / {state.race_distance || '?'}</span>
-                    <span>{state.global_status}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 40px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 16px', backgroundColor: 'var(--bg-panel)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                    <div className="mono-num" style={{ fontWeight: 600, color: 'var(--text-bright)' }}>L{state.current_leader_lap} / {state.race_distance || '?'}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SESSION: {state.session_key}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>STATUS: {state.global_status}</div>
                 </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {isStale && <span className="status-badge status-stale">DATA STALE</span>}
-                    {state.weather && state.weather.status_stale && <span className="status-badge status-stale" style={{ backgroundColor: '#f87171' }}>PARTIAL DATA: WEATHER</span>}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {isStale && <span className="status-badge warning">DATA STALE</span>}
+                    {state.weather && state.weather.status_stale && <span className="status-badge fault">WEATHER STALE</span>}
                     {connectionStatus === "REPLAY_MODE" ? (
-                        <span className="status-badge status-replay">REPLAY MODE</span>
+                        <span className="status-badge warning">REPLAY</span>
                     ) : (
-                        <span className="status-badge status-live">LIVE</span>
+                        <span className="status-badge active">LIVE</span>
                     )}
                 </div>
-            </header>
+            </div>
 
-            <main className="panel race-order">
-                <h3 className="panel-title">Race Order</h3>
-                {sortedDrivers.map(d => (
-                    <div key={d.driver_number} className="driver-row">
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                            <span className="driver-pos">{d.position || '-'}</span>
-                            <span className="driver-num">{d.driver_number}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)' }}>
-                            <span>{d.current_compound} {d.tyre_age}L</span>
-                            <span style={{ width: 60, textAlign: 'right' }}>
-                                {d.gap_to_leader !== null ? `+${d.gap_to_leader.toFixed(1)}s` : ''}
-                            </span>
-                        </div>
-                    </div>
-                ))}
-            </main>
-
-            <section className="strategy-card" style={{ gridColumn: '2 / 3' }}>
-                <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
-                    <button onClick={() => setAnalyticsTab('PACE')} style={{ opacity: analyticsTab === 'PACE' ? 1 : 0.6 }}>Pace Evolution</button>
-                    <button onClick={() => setAnalyticsTab('TYRE')} style={{ opacity: analyticsTab === 'TYRE' ? 1 : 0.6 }}>Tyre Degradation</button>
-                    <button onClick={() => setAnalyticsTab('GAP')} style={{ opacity: analyticsTab === 'GAP' ? 1 : 0.6 }}>Traffic / Gaps</button>
-                </div>
-                
-                {activeDriver && analyticsTab === 'PACE' && (
-                    <div className="panel">
-                        <PaceEvolutionPlot driver={activeDriver} smoothingWindow={3} />
-                    </div>
-                )}
-                
-                {activeDriver && analyticsTab === 'TYRE' && (
-                    <div className="panel">
-                        <TyreDegradationPlot driver={activeDriver} calibration={calibration} />
-                    </div>
-                )}
-                
-                {activeDriver && analyticsTab === 'GAP' && (
-                    <div className="panel">
-                        <GapPlot state={state} driverId={activeDriver.driver_number} />
-                    </div>
-                )}
-
-                {activeDecision ? (
-                    <>
-                        <div className="decision-hero">
-                            <div style={{ color: 'var(--accent-blue)', fontWeight: 600, marginBottom: 4 }}>
-                                STRATOS DECISION
+            <div className="console-grid">
+                {/* LEFT: RACE STATE */}
+                <div className="col-left">
+                    <div className="panel" style={{ flex: 1, overflowY: 'auto' }}>
+                        <div className="panel-header">RACE STATE</div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <div className="data-row" style={{ borderBottom: '1px solid var(--border-subtle)', padding: '0 8px 4px 8px' }}>
+                                <span className="data-label" style={{ width: '20px' }}>P</span>
+                                <span className="data-label" style={{ width: '24px' }}>NO</span>
+                                <span className="data-label" style={{ flex: 1 }}>TYRE</span>
+                                <span className="data-label" style={{ width: '40px', textAlign: 'right' }}>GAP</span>
                             </div>
-                            <h2>{activeDecision.selected_strategy}</h2>
-                            <div className="decision-meta">
-                                <span>Trigger: {activeDecision.trigger}</span>
-                                <span>Objective: <strong style={{color: 'var(--text-main)'}}>{activeDecision.objective}</strong></span>
-                                <span>Confidence: <strong style={{color: activeDecision.decision_confidence === 'HIGH' ? 'var(--accent-green)' : 'var(--accent-yellow)'}}>{activeDecision.decision_confidence}</strong></span>
-                                {activeDecision.probability_selected_beats_baseline !== null && (
-                                    <span>P(Beats Baseline): {(activeDecision.probability_selected_beats_baseline * 100).toFixed(0)}%</span>
-                                )}
-                            </div>
-                            <div className="decision-meta" style={{ marginTop: 8 }}>
-                                <span>Model: {activeDecision.calibration_version}</span>
-                                <span>MC Seed: {activeDecision.monte_carlo_seed}</span>
-                                <span>Timestamp: {activeDecision.timestamp}</span>
-                            </div>
-                        </div>
-
-                        <div className="panel">
-                            <h3 className="panel-title">WHY</h3>
-                            <p>{activeDecision.explanation}</p>
-                        </div>
-                        
-                        <div className="panel">
-                            <h3 className="panel-title">CONSTRAINTS</h3>
-                            <p style={{ color: 'var(--text-muted)' }}>
-                                All candidates filtered against mandatory compound usage and maximum pit window parameters.
-                            </p>
-                        </div>
-                        
-                        {isFutureRevealed && outcome && (
-                            <ActualOutcomePanel outcome={outcome} modelStrategy={activeDecision.selected_strategy} />
-                        )}
-                        
-                        <div className="panel">
-                            <h3 className="panel-title">Pit Window Timeline</h3>
-                            <PitWindowPlot decision={activeDecision} />
-                        </div>
-
-                        <div className="panel">
-                            <h3 className="panel-title">Counterfactual Strategy Analysis</h3>
-                            {activeDecision.candidate_summary.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                    <CounterfactualTable candidates={activeDecision.candidate_summary} />
-                                    <CandidatePlot candidates={activeDecision.candidate_summary} />
+                            {sortedDrivers.map(d => (
+                                <div 
+                                    key={d.driver_number} 
+                                    className="data-row" 
+                                    style={{ cursor: 'pointer', backgroundColor: selectedDriverId === d.driver_number ? 'var(--bg-panel-hover)' : 'transparent' }}
+                                    onClick={() => setSelectedDriverId(d.driver_number)}
+                                >
+                                    <span className="data-value mono-num" style={{ width: '20px', color: 'var(--text-muted)' }}>{d.position || '-'}</span>
+                                    <span className="data-value mono-num" style={{ width: '24px' }}>{d.driver_number}</span>
+                                    <span className="data-value mono-num" style={{ flex: 1 }}>
+                                        <span style={{ color: d.current_compound === 'SOFT' ? 'var(--accent-red)' : d.current_compound === 'MEDIUM' ? 'var(--accent-amber)' : d.current_compound === 'HARD' ? 'var(--text-bright)' : 'var(--accent-green)' }}>
+                                            {d.current_compound ? d.current_compound[0] : '?'}
+                                        </span>
+                                        <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>{d.tyre_age}L</span>
+                                    </span>
+                                    <span className="data-value mono-num" style={{ width: '40px', textAlign: 'right' }}>
+                                        {d.gap_to_leader !== null ? `+${d.gap_to_leader.toFixed(1)}` : ''}
+                                    </span>
                                 </div>
-                            ) : (
-                                <p style={{ color: 'var(--text-muted)' }}>No candidates evaluated.</p>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* CENTER: STRATEGY ANALYSIS */}
+                <div className="col-center">
+                    <div className="panel" style={{ display: 'flex', gap: '8px', padding: '8px 16px' }}>
+                        <button className={analyticsTab === 'PACE' ? 'primary' : ''} onClick={() => setAnalyticsTab('PACE')}>PACE EVOLUTION</button>
+                        <button className={analyticsTab === 'TYRE' ? 'primary' : ''} onClick={() => setAnalyticsTab('TYRE')}>TYRE DEGRADATION</button>
+                        <button className={analyticsTab === 'GAP' ? 'primary' : ''} onClick={() => setAnalyticsTab('GAP')}>TRAFFIC / GAPS</button>
+                    </div>
+                    
+                    <div className="panel" style={{ flex: 1, minHeight: '300px', padding: 0 }}>
+                        {activeDriver && analyticsTab === 'PACE' && <PaceEvolutionPlot driver={activeDriver} smoothingWindow={3} />}
+                        {activeDriver && analyticsTab === 'TYRE' && <TyreDegradationPlot driver={activeDriver} calibration={calibration} />}
+                        {activeDriver && analyticsTab === 'GAP' && <GapPlot state={state} driverId={activeDriver.driver_number} />}
+                    </div>
+
+                    <div className="panel">
+                        <div className="panel-header">COUNTERFACTUAL ANALYSIS</div>
+                        {activeDecision?.candidate_summary.length ? (
+                            <CounterfactualTable candidates={activeDecision.candidate_summary} />
+                        ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>AWAITING DECISION EVALUATION</span>
+                        )}
+                    </div>
+                </div>
+
+                {/* RIGHT: DECISION & TIMELINE */}
+                <div className="col-right">
+                    <div className="panel">
+                        <div className="panel-header">STRATOS DECISION</div>
+                        {activeDecision ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-bright)', borderLeft: '2px solid var(--accent-cyan)', paddingLeft: '8px' }}>
+                                    {activeDecision.selected_strategy}
+                                </div>
+                                <div className="data-row" style={{ padding: '4px 0' }}>
+                                    <span className="data-label">TRIGGER</span>
+                                    <span className="data-value">{activeDecision.trigger}</span>
+                                </div>
+                                <div className="data-row" style={{ padding: '4px 0' }}>
+                                    <span className="data-label">CONFIDENCE</span>
+                                    <span className="data-value" style={{ color: activeDecision.decision_confidence === 'HIGH' ? 'var(--accent-green)' : 'var(--accent-amber)' }}>{activeDecision.decision_confidence}</span>
+                                </div>
+                                {activeDecision.probability_selected_beats_baseline !== null && (
+                                    <div className="data-row" style={{ padding: '4px 0' }}>
+                                        <span className="data-label">P(BEATS BASELINE)</span>
+                                        <span className="data-value mono-num">{(activeDecision.probability_selected_beats_baseline * 100).toFixed(1)}%</span>
+                                    </div>
+                                )}
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
+                                    {activeDecision.explanation}
+                                </div>
+                            </div>
+                        ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>AWAITING DISPATCH</span>
+                        )}
+                    </div>
+                    
+                    {isFutureRevealed && outcome && (
+                        <ActualOutcomePanel outcome={outcome} modelStrategy={activeDecision!.selected_strategy} />
+                    )}
+
+                    <div className="panel" style={{ flex: 1, overflowY: 'auto' }}>
+                        <div className="panel-header">EVENT TIMELINE</div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            {decisions.map((dec) => (
+                                <div 
+                                    key={dec.decision_id} 
+                                    className="data-row"
+                                    onClick={() => setSelectedDecisionId(dec.decision_id)}
+                                    style={{ cursor: 'pointer', borderLeft: selectedDecisionId === dec.decision_id ? '2px solid var(--accent-cyan)' : '2px solid transparent', backgroundColor: selectedDecisionId === dec.decision_id ? 'var(--bg-panel-hover)' : 'transparent' }}
+                                >
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <span className="data-value mono-num" style={{ fontSize: '11px' }}>L{dec.decision_lap}</span>
+                                        <span className="data-label" style={{ fontSize: '9px' }}>{dec.trigger}</span>
+                                    </div>
+                                    <span className="data-value" style={{ fontSize: '11px', textAlign: 'right' }}>{dec.selected_strategy}</span>
+                                </div>
+                            ))}
+                            {decisions.length === 0 && (
+                                <span style={{ color: 'var(--text-muted)', fontSize: '11px', padding: '8px' }}>WAITING FOR TRIGGERS...</span>
                             )}
                         </div>
-                    </>
-                ) : (
-                    <div className="panel" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>No material decision events yet.</span>
                     </div>
-                )}
-            </section>
-
-            <aside className="panel timeline">
-                <h3 className="panel-title">Decision Timeline</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {decisions.map((dec, i) => (
-                        <div 
-                            key={i} 
-                            className="timeline-event"
-                            onClick={() => setSelectedDecisionId(dec.decision_id)}
-                            style={{ opacity: selectedDecisionId === dec.decision_id ? 1 : 0.6 }}
-                        >
-                            <div style={{ fontWeight: 600 }}>Lap {dec.decision_lap}</div>
-                            <div style={{ color: 'var(--accent-blue)' }}>{dec.selected_strategy}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{dec.trigger}</div>
-                        </div>
-                    ))}
-                    {decisions.length === 0 && (
-                        <span style={{ color: 'var(--text-muted)' }}>Waiting for triggers...</span>
-                    )}
                 </div>
-            </aside>
+            </div>
 
             {connectionStatus === "REPLAY_MODE" && (
-                <footer className="controls">
-                    <button onClick={() => sendCommand("START_REPLAY")}><Play size={16} style={{ verticalAlign: 'middle', marginRight: 8 }} /> Play Replay</button>
-                    <button onClick={() => sendCommand("PAUSE_REPLAY")}><Pause size={16} style={{ verticalAlign: 'middle', marginRight: 8 }} /> Pause</button>
-                    <button onClick={() => sendCommand("STEP_REPLAY")}><StepForward size={16} style={{ verticalAlign: 'middle', marginRight: 8 }} /> Step</button>
-                    <button onClick={() => sendCommand("JUMP_TO_LAP")}><FastForward size={16} style={{ verticalAlign: 'middle', marginRight: 8 }} /> Jump to Lap</button>
-                </footer>
+                <div style={{ display: 'flex', gap: '8px', padding: '8px 16px', backgroundColor: 'var(--bg-panel)', borderTop: '1px solid var(--border-color)', justifyContent: 'center' }}>
+                    <button onClick={() => sendCommand("START_REPLAY")}><Play size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} /> PLAY</button>
+                    <button onClick={() => sendCommand("PAUSE_REPLAY")}><Pause size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} /> PAUSE</button>
+                    <button onClick={() => sendCommand("STEP_REPLAY")}><StepForward size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} /> STEP</button>
+                    <button onClick={() => sendCommand("JUMP_TO_LAP")}><FastForward size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} /> JUMP</button>
+                </div>
             )}
         </div>
     );

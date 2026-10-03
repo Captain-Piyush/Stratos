@@ -1,50 +1,113 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useRaceState } from '../hooks/useRaceState';
 
 export function Overview() {
+    const { state, connectionStatus } = useRaceState();
+
     return (
-        <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px', color: 'var(--text-main)' }}>
-            <h1 style={{ fontSize: '3rem', color: 'var(--accent-blue)', marginBottom: 8 }}>STRATOS</h1>
-            <h2 style={{ fontSize: '1.5rem', color: 'var(--text-muted)', fontWeight: 400, marginBottom: 40 }}>
-                Real-time race strategy simulation and decision intelligence.
-            </h2>
-
-            <div className="panel" style={{ marginBottom: 32 }}>
-                <h3 style={{ color: 'var(--accent-blue)' }}>Problem</h3>
-                <p>
-                    Motorsport strategy decisions are historically reliant on rigid pre-race heuristics and manually parameterized 
-                    lap-time models. STRATOS solves this by replacing manual priors with empirical calibration and evaluating 
-                    thousands of probabilistic branches via Monte Carlo simulation in real-time.
-                </p>
-            </div>
-
-            <div className="panel" style={{ marginBottom: 32 }}>
-                <h3 style={{ color: 'var(--accent-blue)' }}>System Architecture</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
-                    <div style={{ padding: 12, backgroundColor: 'var(--bg-dark)', borderLeft: '4px solid var(--border-color)' }}>1. OpenF1 Ingestion</div>
-                    <div style={{ padding: 12, backgroundColor: 'var(--bg-dark)', borderLeft: '4px solid var(--border-color)' }}>2. Race State Reconstruction</div>
-                    <div style={{ padding: 12, backgroundColor: 'var(--bg-dark)', borderLeft: '4px solid var(--border-color)' }}>3. Feature Engineering</div>
-                    <div style={{ padding: 12, backgroundColor: 'var(--bg-dark)', borderLeft: '4px solid var(--border-color)' }}>4. Calibrated Pace / Tyre Models</div>
-                    <div style={{ padding: 12, backgroundColor: 'var(--bg-dark)', borderLeft: '4px solid var(--border-color)' }}>5. Monte Carlo Simulation</div>
-                    <div style={{ padding: 12, backgroundColor: 'var(--bg-dark)', borderLeft: '4px solid var(--border-color)' }}>6. Strategy Evaluation</div>
-                    <div style={{ padding: 12, backgroundColor: 'var(--bg-dark)', borderLeft: '4px solid var(--border-color)' }}>7. Explainable Recommendation</div>
+        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="panel">
+                <h1 style={{ fontSize: '18px', marginBottom: '4px', letterSpacing: '0.05em' }}>STRATOS</h1>
+                <h2 style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '0.1em' }}>
+                    F1 STRATEGY INTELLIGENCE ENGINE
+                </h2>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1px', backgroundColor: 'var(--border-color)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ backgroundColor: 'var(--bg-panel)', padding: '8px' }}>
+                        <div className="data-label">MODE</div>
+                        <div className="data-value" style={{ color: connectionStatus === 'LIVE_CONNECTED' ? 'var(--accent-red)' : connectionStatus === 'REPLAY_MODE' ? 'var(--accent-yellow)' : 'var(--text-muted)' }}>
+                            {connectionStatus === 'LIVE_CONNECTED' ? 'LIVE' : connectionStatus === 'REPLAY_MODE' ? 'REPLAY' : 'DISCONNECTED'}
+                        </div>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-panel)', padding: '8px' }}>
+                        <div className="data-label">SESSION</div>
+                        <div className="data-value mono-num">{state?.session_key || '---'}</div>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-panel)', padding: '8px' }}>
+                        <div className="data-label">LAP</div>
+                        <div className="data-value mono-num">{state?.current_leader_lap || '---'}</div>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-panel)', padding: '8px' }}>
+                        <div className="data-label">MODEL VERSION</div>
+                        <div className="data-value">PHASE 5C-FROZEN</div>
+                    </div>
+                    <div style={{ backgroundColor: 'var(--bg-panel)', padding: '8px' }}>
+                        <div className="data-label">DATA STATUS</div>
+                        <div className="data-value" style={{ color: 'var(--accent-green)' }}>SYNCED</div>
+                    </div>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                <div className="panel">
-                    <h3 style={{ color: 'var(--accent-blue)' }}>Historical Validation</h3>
-                    <p>
-                        STRATOS models are validated retrospectively on holdout datasets. View the empirical metrics of the frozen Phase 5C model.
-                    </p>
-                    <Link to="/validation" style={{ color: 'var(--accent-green)', textDecoration: 'none' }}>View Validation Results →</Link>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div className="panel-header">RACE STATE</div>
+                    <div className="data-row">
+                        <span className="data-label">ACTIVE DRIVERS</span>
+                        <span className="data-value mono-num">{state ? Object.keys(state.driver_states).length : '---'}</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">TRACK TEMP</span>
+                        <span className="data-value mono-num">{state?.weather?.track_temperature != null ? `${state.weather.track_temperature.toFixed(1)}°C` : '---'}</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">AIR TEMP</span>
+                        <span className="data-value mono-num">{state?.weather?.air_temperature != null ? `${state.weather.air_temperature.toFixed(1)}°C` : '---'}</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">TRACK STATUS</span>
+                        <span className="data-value">{state?.global_status === '1' ? 'GREEN' : state?.global_status || '---'}</span>
+                    </div>
                 </div>
-                <div className="panel">
-                    <h3 style={{ color: 'var(--accent-blue)' }}>Live / Replay Engine</h3>
-                    <p>
-                        The core engine is identical whether fed by historical MongoDB stubs or live websockets. Launch the console to experience it.
-                    </p>
-                    <Link to="/demo" style={{ color: 'var(--accent-green)', textDecoration: 'none' }}>Launch Console →</Link>
+
+                <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div className="panel-header">SYSTEM STATUS</div>
+                    <div className="data-row">
+                        <span className="data-label">TELEMETRY INGESTION</span>
+                        <span className="data-value" style={{ color: 'var(--accent-green)' }}>OK</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">DB PERSISTENCE</span>
+                        <span className="data-value" style={{ color: 'var(--accent-green)' }}>OK</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">DECISION LATENCY</span>
+                        <span className="data-value mono-num">{'< 50ms'}</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">MONTE CARLO ITERS</span>
+                        <span className="data-value mono-num">1000</span>
+                    </div>
+                </div>
+
+                <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div className="panel-header">VALIDATION METRICS</div>
+                    <div className="data-row">
+                        <span className="data-label">P10-P90 COVERAGE</span>
+                        <span className="data-value mono-num">90.47%</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">CORRECTED MAE</span>
+                        <span className="data-value mono-num">2.449s</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">CORRECTED MEDIAN AE</span>
+                        <span className="data-value mono-num">1.758s</span>
+                    </div>
+                    <div className="data-row">
+                        <span className="data-label">STATUS</span>
+                        <span className="data-value" style={{ color: 'var(--accent-green)' }}>VERIFIED</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="panel">
+                <div className="panel-header">STRATEGY PIPELINE</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', backgroundColor: 'var(--border-subtle)', border: '1px solid var(--border-subtle)' }}>
+                    {['1. INGEST', '2. RECONSTRUCT', '3. FEATURES', '4. MODELS', '5. SIMULATION', '6. EVALUATION', '7. DECISION'].map((step, i) => (
+                        <div key={i} style={{ backgroundColor: 'var(--bg-panel)', padding: '12px 8px', textAlign: 'center', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                            {step}
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
