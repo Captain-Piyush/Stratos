@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { getApiBaseUrl } from '../config';
 
 export function Validation() {
     const [data, setData] = useState<any>(null);
 
     useEffect(() => {
-        fetch('http://localhost:8000/api/validation')
+        fetch(`${getApiBaseUrl()}/api/validation`)
             .then(res => res.json())
             .then(setData)
             .catch(console.error);

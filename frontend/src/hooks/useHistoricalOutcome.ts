@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { HistoricalOutcome } from '../types/backend';
+import { getApiBaseUrl } from '../config';
 
 export function useHistoricalOutcome(sessionKey: number, driverNumber: number, decisionLap: number, isRevealed: boolean) {
     const [outcome, setOutcome] = useState<HistoricalOutcome | null>(null);
@@ -12,7 +13,7 @@ export function useHistoricalOutcome(sessionKey: number, driverNumber: number, d
         }
         
         setLoading(true);
-        fetch(`http://localhost:8000/api/outcomes/${sessionKey}/${driverNumber}/${decisionLap}`)
+        fetch(`${getApiBaseUrl()}/api/outcomes/${sessionKey}/${driverNumber}/${decisionLap}`)
             .then(res => res.json())
             .then(data => {
                 setOutcome(data as HistoricalOutcome);

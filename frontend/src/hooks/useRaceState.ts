@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { CanonicalRaceState, StrategyDecisionEvent } from '../types/backend';
+import { getApiBaseUrl, getWsUrl } from '../config';
 
 export function useRaceState() {
     const [state, setState] = useState<CanonicalRaceState | null>(null);
@@ -11,7 +12,7 @@ export function useRaceState() {
 
     useEffect(() => {
         // Fetch initial state
-        fetch('http://localhost:8000/api/state')
+        fetch(`${getApiBaseUrl()}/api/state`)
             .then(res => res.json())
             .then(data => {
                 if (data.status === "REPLAY") {
@@ -27,7 +28,7 @@ export function useRaceState() {
 
         // Connect to WebSocket
         const connectWs = () => {
-            const ws = new WebSocket('ws://localhost:8000/api/decisions/stream');
+            const ws = new WebSocket(`${getWsUrl()}/api/decisions/stream`);
             
             ws.onopen = () => {
                 if (connectionStatus === "DISCONNECTED") {

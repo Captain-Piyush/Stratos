@@ -22,9 +22,12 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
+cors_origins_str = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:8000")
+origins = [origin.strip() for origin in cors_origins_str.split(",")] if cors_origins_str else []
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
