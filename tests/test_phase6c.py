@@ -74,10 +74,9 @@ def test_d_live_backfill(mock_client_class):
     assert events[0].event_type == EventType.LAP_COMPLETED
 
 @pytest.mark.anyio
-@patch('backend.app.OpenF1Transport')
-@patch('backend.app.OpenF1AuthService')
+@patch('backend.app.F1SignalRAdapter')
 @patch('backend.app.LiveSessionDiscovery')
-async def test_end_to_end_live_run(mock_discovery_cls, mock_auth_cls, mock_transport_cls):
+async def test_end_to_end_live_run(mock_discovery_cls, mock_adapter_cls):
     """
     E, F, G, H, I, J, K, L, M, N, O, P, Q, END_TO_END
     """
@@ -91,33 +90,32 @@ async def test_end_to_end_live_run(mock_discovery_cls, mock_auth_cls, mock_trans
     e1 = RaceEvent(session_key=9213, timestamp=datetime.now(timezone.utc), event_type=EventType.LAP_COMPLETED, source="mock", sequence_number=1, payload={"driver_number": 1, "lap_number": 1, "lap_duration": 90.0})
     mock_discovery.initialize_live_handoff.return_value = [e1]
     
-    mock_auth = mock_auth_cls.return_value
-    mock_auth.get_token.return_value = "token123"
-    
-    mock_transport = mock_transport_cls.return_value
+    mock_adapter = mock_adapter_cls.return_value
+    mock_adapter.connect = AsyncMock()
+    mock_adapter.get_current_session.return_value = {"Key": 9213, "SessionStatus": "Started"}
     
     # Setup messages from live transport: A lap completion to trigger material change
     # Then an empty message block, then we break the loop to exit test
     call_count = 0
-    def get_msgs(timeout=1.0):
+    async def get_events(timeout=1.0):
         nonlocal call_count
         call_count += 1
         if call_count == 1:
-            return [("v1/laps", {"session_key": 9213, "driver_number": 1, "lap_number": 2, "lap_duration": 91.0, "date_start": "2023-01-01T00:00:00Z"})]
+            return [RaceEvent(session_key=9213, timestamp=datetime.now(timezone.utc), event_type=EventType.LAP_COMPLETED, source="mock", payload={"driver_number": 1, "lap_number": 2, "lap_duration": 91.0})]
         elif call_count == 2:
             return []
         else:
             raise KeyboardInterrupt() # Exit the loop
 
-    mock_transport.get_messages.side_effect = get_msgs
+    mock_adapter.get_events.side_effect = get_events
     
     try:
         await run_live(mock_ws)
     except KeyboardInterrupt:
         pass
         
-    assert mock_transport.start.called
-    assert mock_transport.stop.called
+    assert mock_adapter.connect.called
+    assert mock_adapter.stop.called
     
     # Check websocket messages
     sent_msgs = [call.args[0] for call in mock_ws.send_json.call_args_list]

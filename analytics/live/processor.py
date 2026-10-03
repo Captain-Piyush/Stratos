@@ -60,6 +60,10 @@ def process_event(state: CanonicalRaceState, event: RaceEvent) -> Tuple[Canonica
             driver.position = event.payload.get('position')
             driver.last_update = event.timestamp
             
+            # If coordinates are present, flag GPS as available
+            if 'x' in event.payload or 'y' in event.payload:
+                state.gps_available = True
+            
     elif event.event_type == EventType.INTERVAL_UPDATE:
         driver = _get_or_create_driver(state, event.payload['driver_number'], event.timestamp)
         if EventOrderingPolicy.is_valid_update(driver.last_update, event.timestamp):

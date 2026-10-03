@@ -28,6 +28,9 @@ class StrategyDecisionEvent(BaseModel):
     probability_selected_beats_baseline: Optional[float] = None
     candidate_summary: List[CandidateSummary] = Field(default_factory=list)
     explanation: str
+    pit_window_open: Optional[int] = None
+    pit_window_close: Optional[int] = None
+
     
     # Versioning
     software_version: str = "6.0.0"

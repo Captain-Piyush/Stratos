@@ -45,6 +45,7 @@ class CanonicalRaceState(BaseModel):
     weather: WeatherState = Field(default_factory=WeatherState)
     last_event_timestamp: Optional[datetime] = None
     stale_threshold_seconds: int = 300
+    gps_available: bool = False
 
     def check_staleness(self, current_time: datetime = None):
         if current_time is None:

@@ -17,6 +17,7 @@ from analytics.live.session_discovery import LiveSessionDiscovery
 from analytics.live.openf1.auth import OpenF1AuthService
 from analytics.live.openf1.transport import OpenF1Transport
 from analytics.live.openf1.mapper import OpenF1EventMapper
+from analytics.live.signalr.adapter import F1SignalRAdapter
 from analytics.replay.engine import extract_historical_outcome
 from pydantic import BaseModel
 
@@ -201,26 +202,25 @@ async def run_live(websocket: WebSocket):
     await websocket.send_json({"type": "STATUS_UPDATE", "status": "CONNECTING"})
     
     discovery = LiveSessionDiscovery()
-    session_data = discovery.get_current_live_session()
+    adapter = F1SignalRAdapter()
+    await adapter.connect()
     
+    session_data = adapter.get_current_session()
+    if not session_data:
+        # If no active live session from signalr, fallback to discovery
+        session_data = discovery.get_current_live_session()
+        
     if not session_data:
         await websocket.send_json({"type": "STATUS_UPDATE", "status": "NO_ACTIVE_SESSION"})
         return
         
-    session_key = session_data['session_key']
+    session_key = session_data.get('Key') or session_data.get('session_key')
     app_state.active_session_key = session_key
     app_state.canonical_state = CanonicalRaceState(session_key=session_key)
     
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
-    
-    try:
-        auth_service = OpenF1AuthService()
-        token = auth_service.get_token() # Will raise if no credentials
-    except Exception as e:
-        await websocket.send_json({"type": "STATUS_UPDATE", "status": "CREDENTIALS_NOT_AVAILABLE"})
-        return
 
-    # Backfill
+    # Backfill using discovery API if possible
     backfill_events = discovery.initialize_live_handoff(session_key)
     for ev in backfill_events:
         app_state.canonical_state.weather.last_update = ev.timestamp
@@ -228,9 +228,6 @@ async def run_live(websocket: WebSocket):
         
     await websocket.send_json({"type": "STATE_UPDATE", "payload": app_state.canonical_state.model_dump(mode='json')})
     
-    # Start transport
-    transport = OpenF1Transport(auth_service)
-    transport.start()
     await websocket.send_json({"type": "STATUS_UPDATE", "status": "LIVE"})
     
     global_seq = len(backfill_events)
@@ -238,9 +235,9 @@ async def run_live(websocket: WebSocket):
     
     try:
         while True:
-            messages = transport.get_messages(timeout=1.0)
+            events = await adapter.get_events(timeout=1.0)
             
-            if not messages:
+            if not events:
                 consecutive_empty += 1
                 if consecutive_empty > 30: # 30 seconds no data
                     await websocket.send_json({"type": "STATUS_UPDATE", "status": "LIVE_DATA_UNAVAILABLE"})
@@ -252,13 +249,13 @@ async def run_live(websocket: WebSocket):
             material_change = False
             last_timestamp = None
             
-            for topic, payload in messages:
+            for ev in events:
+                ev.sequence_number = global_seq + 1
                 global_seq += 1
-                for ev in OpenF1EventMapper.map_message(topic, payload, global_seq):
-                    app_state.canonical_state.weather.last_update = ev.timestamp
-                    last_timestamp = ev.timestamp
-                    _, mat = process_event(app_state.canonical_state, ev)
-                    material_change = material_change or mat
+                app_state.canonical_state.weather.last_update = ev.timestamp
+                last_timestamp = ev.timestamp
+                _, mat = process_event(app_state.canonical_state, ev)
+                material_change = material_change or mat
                     
             if material_change and last_timestamp:
                 await websocket.send_json({"type": "STATE_UPDATE", "payload": app_state.canonical_state.model_dump(mode='json')})
@@ -278,5 +275,5 @@ async def run_live(websocket: WebSocket):
                         
             await asyncio.sleep(0.1)
     finally:
-        transport.stop()
+        adapter.stop()
 
