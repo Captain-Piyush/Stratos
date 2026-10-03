@@ -6,35 +6,72 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from database.connection import db
 from analytics.live.decision import StrategyDecisionEvent, CandidateSummary
-from analytics.live.state import CanonicalRaceState
+from analytics.live.state import CanonicalRaceState, DriverState
 from analytics.live.engine import LiveDecisionEngine
 from analytics.live.events import RaceEvent, EventType
 from analytics.live.processor import process_event
 from analytics.live.replay_adapter import ReplayStreamAdapter
+from unittest.mock import patch, MagicMock
+from analytics.simulation.decision import DecisionResult, DecisionObjective
+from analytics.simulation.models import StrategyPlan
 
 @pytest.fixture(scope="module")
 def setup_db():
     db.connect()
 
-def test_confidence_semantics():
+@patch('analytics.live.engine.evaluate_decision')
+def test_confidence_semantics(mock_eval):
+    mock_eval.return_value = DecisionResult(
+        selected_strategy=StrategyPlan(pit_laps=[], pit_compounds=[]),
+        objective=DecisionObjective.MIN_EXPECTED_TIME,
+        decision_score=95.0,
+        confidence='HIGH',
+        expected_time=95.0,
+        median_time=95.0,
+        risk_measure=96.0,
+        probability_vs_baseline=0.7,
+        key_drivers=[],
+        alternatives_considered=2,
+        constraints_applied=0,
+        model_version='1.0',
+        explanation='mocked',
+        is_abstention=False
+    )
     # A. Confidence is not represented as false calibrated probability
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10)
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
     
-    decision = engine.evaluate(state, material_change=True, current_time=datetime.utcnow())
+    decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     assert decision is not None
     # Must be HIGH, MEDIUM, LOW
     assert decision.decision_confidence in ["HIGH", "MEDIUM", "LOW"]
     # Probability must be explicitly separated
     assert isinstance(decision.probability_selected_beats_baseline, float)
 
-def test_candidate_completeness():
+@patch('analytics.live.engine.evaluate_decision')
+def test_candidate_completeness(mock_eval):
+    mock_eval.return_value = DecisionResult(
+        selected_strategy=StrategyPlan(pit_laps=[], pit_compounds=[]),
+        objective=DecisionObjective.MIN_EXPECTED_TIME,
+        decision_score=95.0,
+        confidence='HIGH',
+        expected_time=95.0,
+        median_time=95.0,
+        risk_measure=96.0,
+        probability_vs_baseline=0.7,
+        key_drivers=[],
+        alternatives_considered=2,
+        constraints_applied=0,
+        model_version='1.0',
+        explanation='mocked',
+        is_abstention=False
+    )
     # B. All evaluated candidates are preserved
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10)
-    decision = engine.evaluate(state, material_change=True, current_time=datetime.utcnow())
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     
     assert len(decision.candidate_summary) > 0
     candidate = decision.candidate_summary[0]
@@ -44,12 +81,29 @@ def test_candidate_completeness():
     assert isinstance(candidate.decision_score, float)
     assert hasattr(candidate, "is_selected")
     
-def test_score_traceability():
+@patch('analytics.live.engine.evaluate_decision')
+def test_score_traceability(mock_eval):
+    mock_eval.return_value = DecisionResult(
+        selected_strategy=StrategyPlan(pit_laps=[], pit_compounds=[]),
+        objective=DecisionObjective.MIN_EXPECTED_TIME,
+        decision_score=95.0,
+        confidence='HIGH',
+        expected_time=95.0,
+        median_time=95.0,
+        risk_measure=96.0,
+        probability_vs_baseline=0.7,
+        key_drivers=[],
+        alternatives_considered=2,
+        constraints_applied=0,
+        model_version='1.0',
+        explanation='mocked',
+        is_abstention=False
+    )
     # C. Decision score exactly matches Phase 3C (within mock it matches explicitly)
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10)
-    decision = engine.evaluate(state, material_change=True, current_time=datetime.utcnow())
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     
     # Phase 3C mock score = 95.0
     assert abs(decision.decision_score - 95.0) < 1e-5
@@ -60,14 +114,14 @@ def test_decision_lap_semantics():
     engine.throttle_seconds = 0
     
     # Pre-race initialization
-    state_0 = CanonicalRaceState(session_key=123, current_leader_lap=0)
-    decision_0 = engine.evaluate(state_0, material_change=True, current_time=datetime.utcnow())
+    state_0 = CanonicalRaceState(session_key=123, current_leader_lap=0, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    decision_0 = engine.evaluate(state_0, material_change=True, current_time=datetime.now(timezone.utc))
     assert decision_0.decision_lap == 0
     assert decision_0.trigger == "SESSION_INITIALIZATION"
     
     # Mid-race
-    state_mid = CanonicalRaceState(session_key=123, current_leader_lap=25)
-    decision_mid = engine.evaluate(state_mid, material_change=True, current_time=datetime.utcnow())
+    state_mid = CanonicalRaceState(session_key=123, current_leader_lap=25, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    decision_mid = engine.evaluate(state_mid, material_change=True, current_time=datetime.now(timezone.utc))
     assert decision_mid.decision_lap == 25
     assert decision_mid.trigger == "LAP_COMPLETION"
 
@@ -75,8 +129,8 @@ def test_version_traceability():
     # E. Version provenance is explicit
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10)
-    decision = engine.evaluate(state, material_change=True, current_time=datetime.utcnow())
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     
     assert decision.software_version != ""
     assert decision.simulation_version != ""
@@ -87,10 +141,10 @@ def test_decision_reproducibility():
     # F. Decisions are reproducible
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10)
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
     
-    decision1 = engine.evaluate(state, material_change=True, current_time=datetime.utcnow())
-    decision2 = engine.evaluate(state, material_change=True, current_time=datetime.utcnow())
+    decision1 = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
+    decision2 = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     
     assert decision1.selected_strategy == decision2.selected_strategy
     assert decision1.decision_score == decision2.decision_score
@@ -126,8 +180,8 @@ def test_decision_persistence_schema():
     # I. Decision events are fully auditable
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10)
-    decision = engine.evaluate(state, material_change=True, current_time=datetime.utcnow())
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     
     doc = decision.model_dump()
     assert "session_key" in doc

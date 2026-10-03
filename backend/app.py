@@ -13,6 +13,10 @@ from analytics.live.state import CanonicalRaceState
 from analytics.live.processor import process_event
 from analytics.live.engine import LiveDecisionEngine
 from analytics.live.replay_adapter import ReplayStreamAdapter
+from analytics.live.session_discovery import LiveSessionDiscovery
+from analytics.live.openf1.auth import OpenF1AuthService
+from analytics.live.openf1.transport import OpenF1Transport
+from analytics.live.openf1.mapper import OpenF1EventMapper
 from analytics.replay.engine import extract_historical_outcome
 from pydantic import BaseModel
 
@@ -122,6 +126,15 @@ async def decision_stream(websocket: WebSocket):
                         traceback.print_exc()
                         print(f"Error in run_replay: {e}", flush=True)
                 asyncio.create_task(safe_run_replay(websocket))
+            elif data.startswith("START_LIVE"):
+                async def safe_run_live(ws):
+                    try:
+                        await run_live(ws)
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        print(f"Error in run_live: {e}", flush=True)
+                asyncio.create_task(safe_run_live(websocket))
     except WebSocketDisconnect:
         app_state.connected_clients.remove(websocket)
 
@@ -168,7 +181,95 @@ async def run_replay(websocket: WebSocket):
             }
             try:
                 await websocket.send_json(dec_msg)
+                engine.persist_decision(dec, app_state.canonical_state.model_dump(mode='json'))
             except:
                 break
                 
         await asyncio.sleep(0.01) # Fast replay
+
+async def run_live(websocket: WebSocket):
+    print("Starting run_live...", flush=True)
+    app_state.is_live = True
+    
+    await websocket.send_json({"type": "STATUS_UPDATE", "status": "CONNECTING"})
+    
+    discovery = LiveSessionDiscovery()
+    session_data = discovery.get_current_live_session()
+    
+    if not session_data:
+        await websocket.send_json({"type": "STATUS_UPDATE", "status": "NO_ACTIVE_SESSION"})
+        return
+        
+    session_key = session_data['session_key']
+    app_state.active_session_key = session_key
+    app_state.canonical_state = CanonicalRaceState(session_key=session_key)
+    
+    engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
+    
+    try:
+        auth_service = OpenF1AuthService()
+        token = auth_service.get_token() # Will raise if no credentials
+    except Exception as e:
+        await websocket.send_json({"type": "STATUS_UPDATE", "status": "CREDENTIALS_NOT_AVAILABLE"})
+        return
+
+    # Backfill
+    backfill_events = discovery.initialize_live_handoff(session_key)
+    for ev in backfill_events:
+        app_state.canonical_state.weather.last_update = ev.timestamp
+        process_event(app_state.canonical_state, ev)
+        
+    await websocket.send_json({"type": "STATE_UPDATE", "payload": app_state.canonical_state.model_dump(mode='json')})
+    
+    # Start transport
+    transport = OpenF1Transport(auth_service)
+    transport.start()
+    await websocket.send_json({"type": "STATUS_UPDATE", "status": "LIVE"})
+    
+    global_seq = len(backfill_events)
+    consecutive_empty = 0
+    
+    try:
+        while True:
+            messages = transport.get_messages(timeout=1.0)
+            
+            if not messages:
+                consecutive_empty += 1
+                if consecutive_empty > 30: # 30 seconds no data
+                    await websocket.send_json({"type": "STATUS_UPDATE", "status": "LIVE_DATA_UNAVAILABLE"})
+                    consecutive_empty = 0
+                await asyncio.sleep(0.1)
+                continue
+                
+            consecutive_empty = 0
+            material_change = False
+            last_timestamp = None
+            
+            for topic, payload in messages:
+                global_seq += 1
+                for ev in OpenF1EventMapper.map_message(topic, payload, global_seq):
+                    app_state.canonical_state.weather.last_update = ev.timestamp
+                    last_timestamp = ev.timestamp
+                    _, mat = process_event(app_state.canonical_state, ev)
+                    material_change = material_change or mat
+                    
+            if material_change and last_timestamp:
+                await websocket.send_json({"type": "STATE_UPDATE", "payload": app_state.canonical_state.model_dump(mode='json')})
+                
+                dec = engine.evaluate(app_state.canonical_state, material_change, current_time=last_timestamp)
+                if dec and dec.selected_strategy != "DECISION_WITHHELD":
+                    dec_msg = {
+                        "type": "DECISION_EVENT",
+                        "payload": dec.model_dump(mode='json')
+                    }
+                    try:
+                        await websocket.send_json(dec_msg)
+                        engine.persist_decision(dec, app_state.canonical_state.model_dump(mode='json'))
+                    except Exception as e:
+                        print(f"Failed to send decision: {e}")
+                        break
+                        
+            await asyncio.sleep(0.1)
+    finally:
+        transport.stop()
+
