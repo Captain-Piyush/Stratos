@@ -16,6 +16,7 @@ COPY backend /app/backend
 COPY analytics /app/analytics
 COPY database /app/database
 COPY data /app/data
+COPY ingestion /app/ingestion
 
 # Environment configuration
 ENV MONGODB_URI=mongodb://localhost:27017

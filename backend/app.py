@@ -44,6 +44,10 @@ async def startup_event():
     db.connect()
     app_state.canonical_state = CanonicalRaceState(session_key=app_state.active_session_key)
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "message": "STRATOS API is running"}
+
 @app.get("/api/state")
 async def get_state():
     if app_state.canonical_state is None:
