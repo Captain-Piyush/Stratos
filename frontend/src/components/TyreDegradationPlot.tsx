@@ -7,6 +7,8 @@ interface Props {
     calibration: CalibrationProfile | null;
 }
 
+import { getCalibratedValue } from '../utils/calibration';
+
 export const TyreDegradationPlot: React.FC<Props> = ({ driver, calibration }) => {
     // Show actual lap times vs tyre age, and a calibrated slope line
     const { lap_history = [], current_compound, tyre_age } = driver;
@@ -16,8 +18,8 @@ export const TyreDegradationPlot: React.FC<Props> = ({ driver, calibration }) =>
     const stintLaps = lap_history.slice(-Math.max(tyre_age, 1));
     const ages = stintLaps.map((_, i) => i + 1);
 
-    const slope = calibration?.degradation_slopes?.[current_compound] || 0.05;
-    const baseTime = calibration?.base_lap_times?.[current_compound] || 90.0;
+    const slope = getCalibratedValue(calibration?.degradation_slopes?.[current_compound], 0.05);
+    const baseTime = 90.0; // Base lap times are dynamic based on session phase, using constant for visualization
 
     // Calibrated model line
     const calibratedLine = ages.map(age => baseTime + (age * slope));

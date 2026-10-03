@@ -1,10 +1,28 @@
 import React from 'react';
 import { useCalibration } from '../hooks/useCalibration';
+import { getCalibratedValue } from '../utils/calibration';
+import type { ProvenanceValue } from '../types/backend';
 
 export function Calibration() {
     const calibration = useCalibration();
 
     if (!calibration) return <div style={{ padding: 16 }}>LOADING CALIBRATION VECTORS...</div>;
+
+    const renderProvenance = (val: ProvenanceValue | undefined, fallback: string) => {
+        if (!val) return <span className="data-value mono-num">{fallback}</span>;
+        
+        const isFault = val.quality_status !== 'ACCEPTED';
+        const formattedVal = val.value.toFixed(4);
+        
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                <span className="data-value mono-num">{formattedVal}</span>
+                <span style={{ fontSize: '9px', color: isFault ? 'var(--accent-red)' : 'var(--text-muted)' }}>
+                    [{val.source}] {val.quality_status}
+                </span>
+            </div>
+        );
+    };
 
     return (
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -19,42 +37,40 @@ export function Calibration() {
                 <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>DEGRADATION PRIORS (SEC/LAP)</span>
-                        <span className="status-badge healthy" style={{ fontSize: '9px', padding: '1px 4px' }}>EMPIRICAL</span>
                     </div>
                     <div className="data-row">
                         <span className="data-label" style={{ color: 'var(--accent-red)' }}>SOFT</span>
-                        <span className="data-value mono-num">{(calibration as any).degradation?.SOFT?.toFixed(4) || "0.1000"}</span>
+                        {renderProvenance(calibration.degradation_slopes?.SOFT, "0.1000")}
                     </div>
                     <div className="data-row">
                         <span className="data-label" style={{ color: 'var(--accent-amber)' }}>MEDIUM</span>
-                        <span className="data-value mono-num">{(calibration as any).degradation?.MEDIUM?.toFixed(4) || "0.0800"}</span>
+                        {renderProvenance(calibration.degradation_slopes?.MEDIUM, "0.0800")}
                     </div>
                     <div className="data-row">
                         <span className="data-label">HARD</span>
-                        <span className="data-value mono-num">{(calibration as any).degradation?.HARD?.toFixed(4) || "0.0600"}</span>
+                        {renderProvenance(calibration.degradation_slopes?.HARD, "0.0600")}
                     </div>
                     <div className="data-row">
                         <span className="data-label" style={{ color: 'var(--accent-green)' }}>INTERMEDIATE</span>
-                        <span className="data-value mono-num">{(calibration as any).degradation?.INTERMEDIATE?.toFixed(4) || "0.1200"}</span>
+                        {renderProvenance(calibration.degradation_slopes?.INTERMEDIATE, "0.1200")}
                     </div>
                     <div className="data-row">
                         <span className="data-label" style={{ color: 'var(--accent-blue)' }}>WET</span>
-                        <span className="data-value mono-num">{(calibration as any).degradation?.WET?.toFixed(4) || "0.1500"}</span>
+                        {renderProvenance(calibration.degradation_slopes?.WET, "0.1500")}
                     </div>
                 </div>
 
                 <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>COMPOUND DELTAS (VS SOFT)</span>
-                        <span className="status-badge healthy" style={{ fontSize: '9px', padding: '1px 4px' }}>EMPIRICAL</span>
                     </div>
                     <div className="data-row">
                         <span className="data-label" style={{ color: 'var(--accent-amber)' }}>MEDIUM DELTA</span>
-                        <span className="data-value mono-num">0.7194s</span>
+                        {renderProvenance(calibration.compound_deltas?.MEDIUM, "0.7194")}
                     </div>
                     <div className="data-row">
                         <span className="data-label">HARD DELTA</span>
-                        <span className="data-value mono-num">0.5695s</span>
+                        {renderProvenance(calibration.compound_deltas?.HARD, "0.5695")}
                     </div>
                 </div>
             </div>
@@ -63,22 +79,20 @@ export function Calibration() {
                 <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>GLOBAL PIT-LOSS</span>
-                        <span className="status-badge healthy" style={{ fontSize: '9px', padding: '1px 4px' }}>EMPIRICAL</span>
                     </div>
                     <div className="data-row">
                         <span className="data-label">TRANSIT CONSTANT</span>
-                        <span className="data-value mono-num">{calibration.pit_loss?.toFixed(2) || "23.75"}s</span>
+                        {renderProvenance(calibration.pit_loss, "23.7500")}
                     </div>
                 </div>
                 
                 <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '2px solid var(--accent-red)' }}>
                     <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>FUEL BURN EFFECT</span>
-                        <span className="status-badge fault" style={{ fontSize: '9px', padding: '1px 4px' }}>STATIC PRIOR</span>
                     </div>
                     <div className="data-row">
                         <span className="data-label">WEIGHT PENALTY</span>
-                        <span className="data-value mono-num">{(calibration as any).fuel_effect?.toFixed(4) || "0.0600"} s/lap</span>
+                        {renderProvenance(calibration.fuel_burn_effect, "0.0600")}
                     </div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px' }}>
                         * Fuel mass flow is not empirically observable from public telemetry.

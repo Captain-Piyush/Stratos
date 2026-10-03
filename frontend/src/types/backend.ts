@@ -70,12 +70,28 @@ export interface CanonicalRaceState {
     stale_threshold_seconds: number;
 }
 
+export interface ProvenanceValue {
+    value: number;
+    source: string;
+    sample_size?: number;
+    uncertainty?: number;
+    quality_status: string;
+}
+
 export interface CalibrationProfile {
-    degradation_slopes: Record<string, number>;
-    base_lap_times: Record<string, number>;
-    fuel_effect: number;
-    pit_loss: number;
-    // other fields as needed
+    version: string;
+    calibration_date: string;
+    calibration_races: number[];
+    degradation_slopes: Record<string, ProvenanceValue>;
+    compound_deltas: Record<string, ProvenanceValue>;
+    fuel_burn_effect: ProvenanceValue;
+    pit_loss: ProvenanceValue;
+    circuit_pit_loss?: Record<number, ProvenanceValue>;
+    residuals?: Record<string, ProvenanceValue>;
+    degradation_uncertainty?: ProvenanceValue;
+    fallback_degradation?: ProvenanceValue;
+    fallback_compound_delta?: ProvenanceValue;
+    metadata?: Record<string, any>;
 }
 
 export interface HistoricalOutcome {
