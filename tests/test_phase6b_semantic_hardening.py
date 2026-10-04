@@ -116,8 +116,7 @@ def test_decision_lap_semantics():
     # Pre-race initialization
     state_0 = CanonicalRaceState(session_key=123, current_leader_lap=0, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
     decision_0 = engine.evaluate(state_0, material_change=True, current_time=datetime.now(timezone.utc))
-    assert decision_0.decision_lap == 0
-    assert decision_0.trigger == "SESSION_INITIALIZATION"
+    assert decision_0 is None
     
     # Mid-race
     state_mid = CanonicalRaceState(session_key=123, current_leader_lap=25, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})

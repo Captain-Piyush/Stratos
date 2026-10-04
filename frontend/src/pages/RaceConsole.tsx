@@ -56,16 +56,16 @@ export function RaceConsole() {
     // Header Status string
     let headerStatusText = "UNKNOWN";
     if (activeMode === 'REPLAY') {
-        headerStatusText = "REPLAY MODE";
+        headerStatusText = state && state.global_status ? state.global_status.replace('_', ' ') : "REPLAY MODE";
     } else {
         if (connectionStatus === 'CONNECTING') headerStatusText = "CONNECTING...";
         else if (connectionStatus === 'DISCONNECTED') headerStatusText = "DISCONNECTED";
         else if (connectionStatus === 'RECONNECTING') headerStatusText = "RECONNECTING...";
         else if (connectionStatus === 'ERROR') headerStatusText = "STREAM ERROR";
-        else if (connectionStatus === 'NO_ACTIVE_SESSION') headerStatusText = "WAITING FOR F1 SESSION";
+        else if (connectionStatus === 'NO_ACTIVE_SESSION') headerStatusText = "NO LIVE SESSION";
         else if (connectionStatus === 'LIVE_DATA_UNAVAILABLE') headerStatusText = "LIVE DATA UNAVAILABLE";
         else if (connectionStatus === 'BACKFILLING') headerStatusText = "BACKFILLING...";
-        else if (connectionStatus === 'LIVE') headerStatusText = "SIGNALR CONNECTED";
+        else if (connectionStatus === 'LIVE') headerStatusText = state && state.global_status ? state.global_status.replace('_', ' ') : "SIGNALR CONNECTED";
     }
 
     return (
@@ -196,7 +196,9 @@ export function RaceConsole() {
 
                     <div className="panel">
                         <div className="panel-header">COUNTERFACTUAL ANALYSIS</div>
-                        {activeDecision?.candidate_summary.length ? (
+                        {state?.current_leader_lap === 0 ? (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>WAITING FOR LIVE RACE STATE</span>
+                        ) : activeDecision?.candidate_summary.length ? (
                             <CounterfactualTable candidates={activeDecision.candidate_summary} />
                         ) : (
                             <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>AWAITING DECISION EVALUATION</span>
@@ -208,7 +210,19 @@ export function RaceConsole() {
                 <div className="col-right">
                     <div className="panel">
                         <div className="panel-header">STRATOS DECISION</div>
-                        {activeDecision ? (
+                        {state?.current_leader_lap === 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-bright)' }}>
+                                    PRE-RACE
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    WAITING FOR LIVE RACE STATE
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
+                                    Strategy evaluation will begin when live race telemetry is available.
+                                </div>
+                            </div>
+                        ) : activeDecision ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-bright)', borderLeft: '2px solid var(--accent-cyan)', paddingLeft: '8px' }}>
                                     {activeDecision.selected_strategy}

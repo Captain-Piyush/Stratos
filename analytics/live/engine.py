@@ -132,7 +132,7 @@ class LiveDecisionEngine:
         
         trigger = "LAP_COMPLETION"
         if state.current_leader_lap == 0:
-            trigger = "SESSION_INITIALIZATION"
+            return None
         
         # Extract Phase 3 RaceStateAtDecision
         # Use top driver or a specific driver (default to leader or driver 1 for now if no leader specified)

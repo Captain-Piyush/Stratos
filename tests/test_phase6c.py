@@ -244,3 +244,50 @@ def test_no_future_data_access():
     # The LiveDecisionEngine extracts snapshot only passing current_lap
     # and predict_lap_time does not read the database.
     assert True
+
+
+@patch('analytics.live.engine.FeatureUpdateBridge.extract_race_snapshot')
+def test_pre_race_suppression(mock_extract, mock_db):
+    """
+    session initialization does not produce a live recommendation
+    first real lap/timing event enables strategy evaluation
+    """
+    engine = LiveDecisionEngine(mock_db, "data/calibration/model_v2.json")
+    engine.throttle_seconds = 0
+    
+    # State with 0 completed laps
+    state = CanonicalRaceState(session_key=123)
+    state.current_leader_lap = 0
+    
+    decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
+    assert decision is None, "Should not generate decision on lap 0"
+    
+    # State with 1 completed lap
+    state.current_leader_lap = 1
+    # Mocking driver state to avoid empty drivers list check failure
+    from analytics.live.state import DriverState
+    state.driver_states[1] = DriverState(
+        driver_number=1,
+        position=1,
+        current_compound="MEDIUM",
+        tyre_age=1,
+        stints=1,
+        gap_to_leader=0.0,
+        last_update=datetime.now(timezone.utc)
+    )
+    
+    mock_extract.return_value = {
+        "lap_duration": 90.0,
+        "rolling_pace": 90.0,
+        "compound": "MEDIUM",
+        "tyre_age": 1,
+        "position": 1,
+        "gap_to_leader": 0.0,
+        "air_temperature": 25.0,
+        "track_temperature": 35.0,
+        "safety_car": False
+    }
+    
+    decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
+    assert decision is not None, "Should evaluate strategy when live race telemetry is available"
+    assert decision.selected_strategy != "DECISION_WITHHELD" or decision.explanation == "No laps remaining to simulate."
