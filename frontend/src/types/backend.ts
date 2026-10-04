@@ -68,6 +68,7 @@ export interface CanonicalRaceState {
     weather: WeatherState;
     last_event_timestamp: string | null;
     stale_threshold_seconds: number;
+    gps_available?: boolean;
 }
 
 export interface ProvenanceValue {

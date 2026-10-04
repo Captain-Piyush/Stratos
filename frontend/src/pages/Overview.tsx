@@ -15,8 +15,8 @@ export function Overview() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1px', backgroundColor: 'var(--border-color)', border: '1px solid var(--border-color)' }}>
                     <div style={{ backgroundColor: 'var(--bg-panel)', padding: '8px' }}>
                         <div className="data-label">MODE</div>
-                        <div className="data-value" style={{ color: connectionStatus === 'LIVE_CONNECTED' ? 'var(--accent-red)' : connectionStatus === 'REPLAY_MODE' ? 'var(--accent-yellow)' : 'var(--text-muted)' }}>
-                            {connectionStatus === 'LIVE_CONNECTED' ? 'LIVE' : connectionStatus === 'REPLAY_MODE' ? 'REPLAY' : 'DISCONNECTED'}
+                        <div className="data-value" style={{ color: connectionStatus === 'LIVE' ? 'var(--accent-red)' : connectionStatus === 'REPLAY' ? 'var(--accent-yellow)' : 'var(--text-muted)' }}>
+                            {connectionStatus === 'LIVE' ? 'LIVE' : connectionStatus === 'REPLAY' ? 'REPLAY' : connectionStatus}
                         </div>
                     </div>
                     <div style={{ backgroundColor: 'var(--bg-panel)', padding: '8px' }}>
