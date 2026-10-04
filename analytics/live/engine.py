@@ -150,6 +150,33 @@ class LiveDecisionEngine:
         if not snapshot:
             return None
             
+        import uuid
+        
+        if (snapshot.get("compound", "UNKNOWN") == "UNKNOWN" or
+            snapshot.get("lap_duration") is None or
+            snapshot.get("position") is None):
+            return StrategyDecisionEvent(
+                session_key=state.session_key,
+                timestamp=current_time or datetime.now(timezone.utc),
+                driver_number=target_driver,
+                decision_lap=state.current_leader_lap,
+                trigger=trigger,
+                selected_strategy="DECISION_WITHHELD",
+                objective="NONE",
+                decision_score=0.0,
+                decision_confidence="LOW",
+                probability_selected_beats_baseline=None,
+                candidate_summary=[],
+                explanation="WAITING FOR SUFFICIENT LIVE STATE",
+                software_version="1.0.0",
+                simulation_version="1.0.0",
+                decision_version="1.0.0",
+                calibration_version=self.calibration_version,
+                monte_carlo_seed=42,
+                state_snapshot_hash="pending",
+                decision_id=str(uuid.uuid4())
+            )
+            
         rs = RaceStateAtDecision(
             session_key=state.session_key,
             driver_number=target_driver,

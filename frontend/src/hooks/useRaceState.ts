@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { CanonicalRaceState, StrategyDecisionEvent } from '../types/backend';
 import { getApiBaseUrl, getWsUrl } from '../config';
 
-export type ConnectionStatus = "DISCONNECTED" | "CONNECTING" | "LIVE" | "BACKFILLING" | "RECONNECTING" | "ERROR" | "REPLAY" | "NO_ACTIVE_SESSION" | "LIVE_DATA_UNAVAILABLE";
+export type ConnectionStatus = "DISCONNECTED" | "CONNECTING" | "LIVE" | "BACKFILLING" | "RECONNECTING" | "ERROR" | "REPLAY" | "NO_ACTIVE_SESSION" | "LIVE_DATA_UNAVAILABLE" | "LIVE_TIMING" | "LIVE_DATA_STALE" | "PRE_RACE";
 
 export function useRaceState() {
     const [state, setState] = useState<CanonicalRaceState | null>(null);
@@ -49,6 +49,8 @@ export function useRaceState() {
                         else if (status === "BACKFILL_COMPLETE" || status === "BACKFILL_FAILED") setConnectionStatus("LIVE");
                         else if (status === "NO_ACTIVE_SESSION") setConnectionStatus("NO_ACTIVE_SESSION");
                         else if (status === "LIVE_DATA_UNAVAILABLE") setConnectionStatus("LIVE_DATA_UNAVAILABLE");
+                        else if (status === "LIVE_DATA_STALE") setConnectionStatus("LIVE_DATA_STALE");
+                        else if (status === "LIVE_TIMING") setConnectionStatus("LIVE_TIMING");
                         else if (status === "LIVE") setConnectionStatus("LIVE");
                         else if (status === "CONNECTING") setConnectionStatus("CONNECTING");
                     } else if (msg.type === "STATE_UPDATE") {
@@ -64,7 +66,13 @@ export function useRaceState() {
                             return prev;
                         });
                     } else if (msg.type === "DECISION_EVENT") {
-                        setDecisions(prev => [...prev, msg.payload as StrategyDecisionEvent]);
+                        setDecisions(prev => {
+                            const newDec = msg.payload as StrategyDecisionEvent;
+                            if (prev.some(d => d.decision_id === newDec.decision_id)) {
+                                return prev;
+                            }
+                            return [...prev, newDec];
+                        });
                     }
                 } catch (e) {
                     console.error("Failed to parse WS message", e);

@@ -64,6 +64,8 @@ export function RaceConsole() {
         else if (connectionStatus === 'ERROR') headerStatusText = "STREAM ERROR";
         else if (connectionStatus === 'NO_ACTIVE_SESSION') headerStatusText = "NO LIVE SESSION";
         else if (connectionStatus === 'LIVE_DATA_UNAVAILABLE') headerStatusText = "LIVE DATA UNAVAILABLE";
+        else if (connectionStatus === 'LIVE_DATA_STALE') headerStatusText = "LIVE DATA STALE";
+        else if (connectionStatus === 'LIVE_TIMING') headerStatusText = "LIVE TIMING";
         else if (connectionStatus === 'BACKFILLING') headerStatusText = "BACKFILLING...";
         else if (connectionStatus === 'LIVE') headerStatusText = state && state.global_status ? state.global_status.replace('_', ' ') : "SIGNALR CONNECTED";
     }
@@ -73,8 +75,8 @@ export function RaceConsole() {
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 16px', backgroundColor: 'var(--bg-panel)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontWeight: 600 }}>
-                        {activeMode === 'LIVE' && connectionStatus === 'LIVE' && <span style={{ color: 'var(--accent-green)' }}>●</span>}
-                        {activeMode === 'LIVE' && connectionStatus !== 'LIVE' && <span style={{ color: 'var(--accent-amber)' }}>●</span>}
+                        {activeMode === 'LIVE' && (connectionStatus === 'LIVE' || connectionStatus === 'LIVE_TIMING') && <span style={{ color: 'var(--accent-green)' }}>●</span>}
+                        {activeMode === 'LIVE' && connectionStatus !== 'LIVE' && connectionStatus !== 'LIVE_TIMING' && <span style={{ color: 'var(--accent-amber)' }}>●</span>}
                         <span style={{ color: activeMode === 'LIVE' ? 'var(--accent-cyan)' : 'var(--text-bright)' }}>{activeMode}</span>
                     </div>
                     {state ? (
@@ -186,9 +188,9 @@ export function RaceConsole() {
                     </div>
                     
                     <div className="panel" style={{ flex: 1, minHeight: '300px', padding: 0 }}>
-                        {activeDriver && analyticsTab === 'PACE' && <PaceEvolutionPlot driver={activeDriver} smoothingWindow={3} />}
-                        {activeDriver && analyticsTab === 'TYRE' && <TyreDegradationPlot driver={activeDriver} calibration={calibration} />}
-                        {activeDriver && analyticsTab === 'GAP' && state && <GapPlot state={state} driverId={activeDriver.driver_number} />}
+                        {activeDriver && analyticsTab === 'PACE' && (activeDriver.lap_history?.length > 1 ? <PaceEvolutionPlot driver={activeDriver} smoothingWindow={3} /> : <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '11px' }}>INSUFFICIENT LIVE PACE HISTORY</div>)}
+                        {activeDriver && analyticsTab === 'TYRE' && (activeDriver.lap_history?.length > 1 ? <TyreDegradationPlot driver={activeDriver} calibration={calibration} /> : <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '11px' }}>INSUFFICIENT LIVE PACE HISTORY</div>)}
+                        {activeDriver && analyticsTab === 'GAP' && state && (activeDriver.lap_history?.length > 0 ? <GapPlot state={state} driverId={activeDriver.driver_number} /> : <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '11px' }}>INSUFFICIENT LIVE PACE HISTORY</div>)}
                         {!activeDriver && (
                             <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '11px' }}>AWAITING LIVE RACE STATE</div>
                         )}
@@ -250,8 +252,39 @@ export function RaceConsole() {
                         )}
                     </div>
                     
-                    {isFutureRevealed && outcome && (
+                    {isFutureRevealed && outcome && activeMode === 'REPLAY' && (
                         <ActualOutcomePanel outcome={outcome} modelStrategy={activeDecision!.selected_strategy} />
+                    )}
+                    {activeMode === 'LIVE' && (
+                        <div className="panel" style={{ borderLeft: '4px solid var(--accent-cyan)' }}>
+                            <div className="panel-header">LIVE RACE CONTEXT</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                <div>
+                                    <div className="data-label">CURRENT LAP</div>
+                                    <div className="data-value mono-num">{state?.current_leader_lap || 0} / {state?.race_distance || '?'}</div>
+                                </div>
+                                <div>
+                                    <div className="data-label">RACE STATUS</div>
+                                    <div className="data-value">{state?.global_status ? state.global_status.replace('_', ' ') : 'UNKNOWN'}</div>
+                                </div>
+                                <div>
+                                    <div className="data-label">TIMING DATA</div>
+                                    <div className="data-value">{isStale ? <span style={{ color: 'var(--accent-amber)' }}>STALE</span> : <span style={{ color: 'var(--accent-green)' }}>LIVE</span>}</div>
+                                </div>
+                                <div>
+                                    <div className="data-label">TYRE DATA</div>
+                                    <div className="data-value">{state && Object.values(state.driver_states).some(d => d.current_compound === 'UNKNOWN') ? <span style={{ color: 'var(--accent-amber)' }}>INCOMPLETE</span> : <span style={{ color: 'var(--accent-green)' }}>COMPLETE</span>}</div>
+                                </div>
+                                <div>
+                                    <div className="data-label">MODEL STATE</div>
+                                    <div className="data-value">{(connectionStatus === 'LIVE' || connectionStatus === 'LIVE_TIMING') ? <span style={{ color: 'var(--accent-green)' }}>ACTIVE</span> : <span style={{ color: 'var(--accent-amber)' }}>STANDBY</span>}</div>
+                                </div>
+                                <div>
+                                    <div className="data-label">GPS</div>
+                                    <div className="data-value">{state?.gps_available ? <span style={{ color: 'var(--accent-green)' }}>GPS_AVAILABLE</span> : <span style={{ color: 'var(--accent-red)' }}>TRACK POSITION UNAVAILABLE</span>}</div>
+                                </div>
+                            </div>
+                        </div>
                     )}
 
                     <div className="panel" style={{ flex: 1, overflowY: 'auto' }}>

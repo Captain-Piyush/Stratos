@@ -40,7 +40,7 @@ def test_confidence_semantics(mock_eval):
     # A. Confidence is not represented as false calibrated probability
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, current_compound="MEDIUM", last_lap_time=90.0, lap_history=[90.0], tyre_age=1, last_update=datetime.now(timezone.utc))})
     
     decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     assert decision is not None
@@ -70,7 +70,7 @@ def test_candidate_completeness(mock_eval):
     # B. All evaluated candidates are preserved
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, current_compound="MEDIUM", last_lap_time=90.0, lap_history=[90.0], tyre_age=1, last_update=datetime.now(timezone.utc))})
     decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     
     assert len(decision.candidate_summary) > 0
@@ -102,7 +102,7 @@ def test_score_traceability(mock_eval):
     # C. Decision score exactly matches Phase 3C (within mock it matches explicitly)
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
     engine.throttle_seconds = 0
-    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, last_update=datetime.now(timezone.utc))})
+    state = CanonicalRaceState(session_key=123, current_leader_lap=10, driver_states={1: DriverState(driver_number=1, position=1, current_compound="MEDIUM", last_lap_time=90.0, lap_history=[90.0], tyre_age=1, last_update=datetime.now(timezone.utc))})
     decision = engine.evaluate(state, material_change=True, current_time=datetime.now(timezone.utc))
     
     # Phase 3C mock score = 95.0
@@ -149,7 +149,19 @@ def test_decision_reproducibility():
     assert decision1.decision_score == decision2.decision_score
     assert decision1.monte_carlo_seed == decision2.monte_carlo_seed
 
-def test_replay_live_decision_equality(setup_db):
+@patch('analytics.live.engine.FeatureUpdateBridge.extract_race_snapshot')
+def test_replay_live_decision_equality(mock_extract, setup_db):
+    mock_extract.return_value = {
+        "compound": "MEDIUM",
+        "tyre_age": 10,
+        "position": 1,
+        "gap_to_leader": 0.0,
+        "lap_duration": 90.0,
+        "rolling_pace": 90.0,
+        "air_temperature": 25.0,
+        "track_temperature": 35.0,
+        "safety_car": False
+    }
     # G. Replay and live-engine replay produce equivalent decisions
     session_key = 7953
     adapter = ReplayStreamAdapter(db, session_key)

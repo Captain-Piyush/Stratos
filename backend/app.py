@@ -256,6 +256,7 @@ async def run_live(websocket: WebSocket):
     global_seq = 1000000
 
     consecutive_empty = 0
+    current_live_status = "LIVE"
     
     try:
         while True:
@@ -264,10 +265,16 @@ async def run_live(websocket: WebSocket):
             if not events:
                 consecutive_empty += 1
                 if consecutive_empty > 30: # 30 seconds no data
-                    await websocket.send_json({"type": "STATUS_UPDATE", "status": "LIVE_DATA_UNAVAILABLE"})
-                    consecutive_empty = 0
+                    if current_live_status != "LIVE_DATA_STALE":
+                        current_live_status = "LIVE_DATA_STALE"
+                        await websocket.send_json({"type": "STATUS_UPDATE", "status": "LIVE_DATA_STALE"})
+                    consecutive_empty = 31  # prevent overflow and keep it above threshold
                 await asyncio.sleep(0.1)
                 continue
+                
+            if current_live_status != "LIVE_TIMING":
+                current_live_status = "LIVE_TIMING"
+                await websocket.send_json({"type": "STATUS_UPDATE", "status": "LIVE_TIMING"})
                 
             consecutive_empty = 0
             material_change = False

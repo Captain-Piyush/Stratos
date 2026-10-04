@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timezone
 import sys
 import pandas as pd
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from database.connection import db
@@ -61,7 +62,19 @@ def test_stale_weather_withholds_decision(setup_db):
     assert decision.selected_strategy == "DECISION_WITHHELD"
     assert decision.explanation == "STALE_WEATHER"
     
-def test_replay_live_equivalence(setup_db):
+@patch('analytics.live.engine.FeatureUpdateBridge.extract_race_snapshot')
+def test_replay_live_equivalence(mock_extract, setup_db):
+    mock_extract.return_value = {
+        "compound": "MEDIUM",
+        "tyre_age": 10,
+        "position": 1,
+        "gap_to_leader": 0.0,
+        "lap_duration": 90.0,
+        "rolling_pace": 90.0,
+        "air_temperature": 25.0,
+        "track_temperature": 35.0,
+        "safety_car": False
+    }
     session_key = 7953
     adapter = ReplayStreamAdapter(db, session_key)
     
