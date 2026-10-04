@@ -11,15 +11,9 @@ import { useHistoricalOutcome } from '../hooks/useHistoricalOutcome';
 import { Play, Pause, StepForward, FastForward, Activity, MonitorPlay } from 'lucide-react';
 import '../index.css';
 
-const SESSION_MAP: Record<number, string> = {
-    9213: 'SINGAPORE',
-    9214: 'SEPANG',
-    9215: 'BAHRAIN'
-};
-
-const getCircuitName = (sessionKey: number | undefined) => {
-    if (!sessionKey) return 'UNKNOWN CIRCUIT';
-    return SESSION_MAP[sessionKey] || `SESSION ${sessionKey}`;
+const getCircuitName = (state: any) => {
+    if (!state) return 'UNKNOWN CIRCUIT';
+    return state.circuit_name || state.meeting_name || `SESSION ${state.session_key}`;
 };
 
 export function RaceConsole() {
@@ -85,7 +79,7 @@ export function RaceConsole() {
                     </div>
                     {state ? (
                         <>
-                            <div style={{ fontWeight: 600, color: 'var(--text-bright)' }}>{getCircuitName(state.session_key)}</div>
+                            <div style={{ fontWeight: 600, color: 'var(--text-bright)' }}>{getCircuitName(state)}</div>
                             <div className="mono-num" style={{ fontWeight: 600, color: 'var(--text-bright)' }}>
                                 L{state.current_leader_lap} / {state.race_distance || '?'}
                             </div>

@@ -38,6 +38,10 @@ class WeatherState(BaseModel):
 
 class CanonicalRaceState(BaseModel):
     session_key: int
+    meeting_name: Optional[str] = None
+    circuit_name: Optional[str] = None
+    session_name: Optional[str] = None
+    session_type: Optional[str] = None
     race_distance: Optional[int] = None
     global_status: SessionState = SessionState.UNKNOWN
     current_leader_lap: int = 0

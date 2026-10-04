@@ -215,9 +215,20 @@ async def run_live(websocket: WebSocket):
         return
         
     session_key = session_data.get('Key') or session_data.get('session_key')
-    app_state.active_session_key = session_key
-    app_state.canonical_state = CanonicalRaceState(session_key=session_key)
     
+    meeting_name = session_data.get('Meeting', {}).get('Name') or session_data.get('meeting_name')
+    circuit_name = session_data.get('Meeting', {}).get('Location') or session_data.get('circuit_short_name')
+    session_name = session_data.get('Name') or session_data.get('session_name')
+    session_type = session_data.get('Type') or session_data.get('session_type')
+    
+    app_state.active_session_key = session_key
+    app_state.canonical_state = CanonicalRaceState(
+        session_key=session_key,
+        meeting_name=meeting_name,
+        circuit_name=circuit_name,
+        session_name=session_name,
+        session_type=session_type
+    )
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
 
     # Reached LIVE state immediately

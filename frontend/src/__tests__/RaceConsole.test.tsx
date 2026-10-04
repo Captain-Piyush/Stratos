@@ -9,7 +9,7 @@ import React from 'react';
  * - LIVE mode selection
  * - START_LIVE command sent exactly once
  * - state transitions (DISCONNECTED, CONNECTING, LIVE, BACKFILLING, etc)
- * - dynamic session display (SEPANG mapped from 9214)
+ * - dynamic session display
  * - BACKFILLING state indicator
  * - REPLAY mode preserved
  * - no hardcoded session 9213 in LIVE mode
@@ -50,10 +50,11 @@ describe('RaceConsole', () => {
         expect(screen.getByText('AWAITING SESSION DATA')).toBeInTheDocument();
     });
 
-    it('should show BACKFILLING and SEPANG dynamically', () => {
+    it('should show BACKFILLING and dynamic circuit name', () => {
         (useRaceState as any).mockReturnValue({
             state: {
                 session_key: 9214,
+                circuit_name: 'SEPANG',
                 global_status: 'Started',
                 current_leader_lap: 10,
                 race_distance: 56,

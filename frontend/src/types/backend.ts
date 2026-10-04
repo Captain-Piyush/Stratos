@@ -61,6 +61,10 @@ export interface WeatherState {
 
 export interface CanonicalRaceState {
     session_key: number;
+    meeting_name?: string;
+    circuit_name?: string;
+    session_name?: string;
+    session_type?: string;
     race_distance: number | null;
     global_status: string;
     current_leader_lap: number;
