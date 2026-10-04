@@ -207,8 +207,8 @@ async def run_live(websocket: WebSocket):
     
     session_data = adapter.get_current_session()
     if not session_data:
-        # If no active live session from signalr, fallback to discovery
-        session_data = discovery.get_current_live_session()
+        # If no active live session from signalr, fallback to discovery asynchronously
+        session_data = await asyncio.to_thread(discovery.get_current_live_session)
         
     if not session_data:
         await websocket.send_json({"type": "STATUS_UPDATE", "status": "NO_ACTIVE_SESSION"})
@@ -220,17 +220,30 @@ async def run_live(websocket: WebSocket):
     
     engine = LiveDecisionEngine(db, os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/calibration/model_v2.json')))
 
-    # Backfill using discovery API if possible
-    backfill_events = discovery.initialize_live_handoff(session_key)
-    for ev in backfill_events:
-        app_state.canonical_state.weather.last_update = ev.timestamp
-        process_event(app_state.canonical_state, ev)
-        
-    await websocket.send_json({"type": "STATE_UPDATE", "payload": app_state.canonical_state.model_dump(mode='json')})
-    
+    # Reached LIVE state immediately
     await websocket.send_json({"type": "STATUS_UPDATE", "status": "LIVE"})
+
+    async def perform_backfill():
+        try:
+            await websocket.send_json({"type": "STATUS_UPDATE", "status": "BACKFILL_RUNNING"})
+            backfill_events = await asyncio.to_thread(discovery.initialize_live_handoff, session_key)
+            for i, ev in enumerate(backfill_events):
+                app_state.canonical_state.weather.last_update = ev.timestamp
+                process_event(app_state.canonical_state, ev)
+                if i % 100 == 0:
+                    await asyncio.sleep(0)
+            
+            await websocket.send_json({"type": "STATUS_UPDATE", "status": "BACKFILL_COMPLETE"})
+            await websocket.send_json({"type": "STATE_UPDATE", "payload": app_state.canonical_state.model_dump(mode='json')})
+        except Exception as e:
+            print(f"Backfill failed: {e}")
+            await websocket.send_json({"type": "STATUS_UPDATE", "status": "BACKFILL_FAILED"})
+
+    # Launch optional backfill asynchronously
+    asyncio.create_task(perform_backfill())
     
-    global_seq = len(backfill_events)
+    global_seq = 1000000
+
     consecutive_empty = 0
     
     try:
